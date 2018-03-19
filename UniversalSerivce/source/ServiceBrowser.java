@@ -1,0 +1,72 @@
+import java.awt.*;
+import javax.swing.*;
+import java.rmi.*;
+import java.awt.event.*;
+@SuppressWarnings("unchecked")
+public class ServiceBrowser {
+	JPanel mainPanel;
+	JComboBox serviceList;
+	ServiceServer server;
+
+	public void buildGUI() {
+		JFrame frame = new JFrame("RMI Browser");
+		mainPanel = new JPanel();
+		frame.getContentPane().add(BorderLayout.CENTER, mainPanel);
+
+		Object[] services = getServiceList();
+
+		serviceList = new JComboBox(services);// keys array
+		frame.getContentPane().add(BorderLayout.NORTH, serviceList);
+		serviceList.addActionListener(new MyListListener());
+		frame.setSize(500, 500);
+		frame.setVisible(true);
+		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+	}
+
+// add the actual service to the GUI, after user has selected one
+// call getService() on the remote server
+// set the getGuiPanel on browser's mainPanel
+	void loadService(Object serviceSelection) {
+		try {
+			Service svc = server.getService(serviceSelection);
+
+			mainPanel.removeAll();
+			mainPanel.add(svc.getGuiPanel());
+			mainPanel.validate();
+			mainPanel.repaint();
+		} catch (Exception ex) {
+			ex.printStackTrace();
+		}
+	}
+
+// do the RMI registry lookup, get the stub, and call getServiceList(on the server)
+	Object[] getServiceList() {
+		Object obj = null;
+		Object[] services = null;
+		try {
+			obj = Naming.lookup("rmi://127.0.0.1/ServiceServer");
+		} catch (Exception ex) {
+			ex.printStackTrace();
+		}
+		server = (ServiceServer) obj;
+
+		try {
+			services = server.getServiceList();
+		} catch (Exception ex) {
+			ex.printStackTrace();
+		}
+
+		return services;
+	}
+
+	class MyListListener implements ActionListener {
+		public void actionPerformed(ActionEvent ev) {
+			Object selection = serviceList.getSelectedItem();
+			loadService(selection);
+		}
+	}
+
+	public static void main(String[] args) {
+		new ServiceBrowser().buildGUI();
+	}
+}
